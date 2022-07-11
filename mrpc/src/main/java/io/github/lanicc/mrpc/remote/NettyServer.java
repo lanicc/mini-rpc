@@ -28,12 +28,10 @@ public class NettyServer {
 
     private final EventLoopGroup workerGroup;
 
-    private final ProtoCodec protoCodec;
 
     public NettyServer(ServerConfig config) {
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
-        protoCodec = new ProtoCodec(config.getSerializer());
         channelFuture =
                 new ServerBootstrap()
                         .group(bossGroup, workerGroup)
@@ -45,7 +43,7 @@ public class NettyServer {
                                 channel.pipeline()
                                         .addLast(new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4))
                                         .addLast(new LengthFieldPrepender(4))
-                                        .addLast(protoCodec)
+                                        .addLast(new ProtoCodec(config.getSerializer()))
                                         .addLast(new ServerHandler(config));
                             }
                         })

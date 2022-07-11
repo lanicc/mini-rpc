@@ -1,6 +1,9 @@
 package io.github.lanicc.mrpc.remote;
 
 import io.github.lanicc.mrpc.remote.proto.Protocol;
+import io.github.lanicc.mrpc.remote.proto.Request;
+import io.github.lanicc.mrpc.stream.StreamObserver;
+import io.github.lanicc.mrpc.stream.StreamResponseMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.PlatformDependent;
@@ -8,6 +11,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -20,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class ClientHandler extends SimpleChannelInboundHandler<Protocol> {
 
     private final Map<Long, CompletableFuture> completableFutureMap;
+    private final Map<Long, StreamObserver> streamObserverMap;
 
     private final Semaphore throttle;
 
@@ -29,6 +34,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<Protocol> {
         this.maxWaitSize = maxWaitSize;
         this.completableFutureMap = PlatformDependent.newConcurrentHashMap(maxWaitSize);
         this.throttle = new Semaphore(maxWaitSize);
+        this.streamObserverMap = new ConcurrentHashMap<>();
     }
 
     public <T> CompletableFuture<T> future(long requestId) throws InterruptedException {
@@ -42,6 +48,10 @@ public class ClientHandler extends SimpleChannelInboundHandler<Protocol> {
         return Objects.isNull(future) ? completableFuture : future;
     }
 
+    public void stream(Request request) {
+        streamObserverMap.put(request.getRequestId(), request.getStreamObserver());
+    }
+
     public void remove(long id) {
         throttle.release();
         completableFutureMap.remove(id);
@@ -53,9 +63,24 @@ public class ClientHandler extends SimpleChannelInboundHandler<Protocol> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, Protocol protocol) throws Exception {
+        if (protocol instanceof StreamResponseMessage) {
+            processStream((StreamResponseMessage) protocol);
+            return;
+        }
+
         long requestId = protocol.getRequestId();
         CompletableFuture future = completableFutureMap.remove(requestId);
         future.complete(protocol);
         throttle.release();
+    }
+
+    private void processStream(StreamResponseMessage streamResponseMessage) {
+        StreamObserver observer = streamObserverMap.get(streamResponseMessage.getRequestId());
+        if (!streamResponseMessage.isComplete()) {
+            observer.onNext(streamResponseMessage.getData());
+        } else {
+            streamObserverMap.remove(streamResponseMessage.getRequestId());
+            observer.onCompleted();
+        }
     }
 }

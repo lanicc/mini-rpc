@@ -1,5 +1,7 @@
 package io.github.lanicc.mrpc.test.api;
 
+import io.github.lanicc.mrpc.stream.StreamObserver;
+
 import java.util.List;
 
 /**
@@ -15,4 +17,5 @@ public interface UserApi {
 
     List<User> list();
 
+    void iterate(StreamObserver<User> userStreamObserver);
 }

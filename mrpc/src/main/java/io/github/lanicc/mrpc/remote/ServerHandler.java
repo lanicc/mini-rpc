@@ -31,17 +31,22 @@ public class ServerHandler extends SimpleChannelInboundHandler<Protocol> {
     protected void channelRead0(ChannelHandlerContext ctx, Protocol protocol) throws Exception {
         logger.debug(protocol.toString());
         if (protocol instanceof Request) {
-            try {
-                Object result = invoker.invoke((Request) protocol);
-                Response response = new Response();
-                response.setRequestId(protocol.getRequestId());
-                response.setData(result);
-                ctx.channel().writeAndFlush(response);
-            } catch (Exception e) {
-                logger.error("invoke service error", e);
-            }
+            processRequest((Request) protocol, ctx);
         } else {
             logger.warn("receive unexpected message: {}", protocol);
         }
     }
+
+    private void processRequest(Request request, ChannelHandlerContext ctx) {
+        try {
+            Object result = invoker.invoke(request, ctx.channel());
+            Response response = new Response();
+            response.setRequestId(request.getRequestId());
+            response.setData(result);
+            ctx.channel().writeAndFlush(response);
+        } catch (Exception e) {
+            logger.error("invoke service error", e);
+        }
+    }
+
 }
