@@ -1,5 +1,7 @@
 package io.github.lanicc.mrpc.remote.proto;
 
+import io.github.lanicc.mrpc.stream.StreamObserver;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -15,10 +17,12 @@ public class Request extends Protocol {
 
     private String method;
 
+    private boolean stream;
+
+    private transient StreamObserver<?> streamObserver;
     public Request() {
         this.requestId = REQUEST_ID.getAndIncrement();
     }
-
 
     public Class<?> getClazz() {
         return clazz;
@@ -38,11 +42,30 @@ public class Request extends Protocol {
         return this;
     }
 
+    public boolean isStream() {
+        return stream;
+    }
+
+    public Request setStream(boolean stream) {
+        this.stream = stream;
+        return this;
+    }
+
+    public StreamObserver<?> getStreamObserver() {
+        return streamObserver;
+    }
+
+    public Request setStreamObserver(StreamObserver<?> streamObserver) {
+        this.streamObserver = streamObserver;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Request{" +
                 "clazz=" + clazz +
                 ", method='" + method + '\'' +
+                ", stream=" + stream +
                 ", requestId=" + requestId +
                 ", data=" + data +
                 '}';

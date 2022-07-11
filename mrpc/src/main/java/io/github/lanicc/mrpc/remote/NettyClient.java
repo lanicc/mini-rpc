@@ -86,6 +86,11 @@ public class NettyClient {
         return future;
     }
 
+    public void streamRequest(Request request) throws InterruptedException {
+        clientHandler.stream(request);
+        requestAsync(request);
+    }
+
     public Response requestSync(Request request) throws ExecutionException, InterruptedException, TimeoutException {
         CompletableFuture<Response> future = requestAsync(request);
         Response response = future.get(3, TimeUnit.SECONDS);

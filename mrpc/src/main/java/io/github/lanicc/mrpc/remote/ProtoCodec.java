@@ -7,9 +7,11 @@ import io.github.lanicc.mrpc.serialization.Serializer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageCodec;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -27,8 +29,15 @@ public class ProtoCodec extends ByteToMessageCodec<Protocol> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Protocol protocol, ByteBuf out) throws Exception {
+       encode(protocol, out);
+    }
+
+    private void encode(Protocol protocol, ByteBuf out) throws IOException {
         boolean isRequest = protocol instanceof Request;
         out.writeBoolean(isRequest);
+        if (isRequest) {
+            //((Request) protocol).isStream()
+        }
         ByteBufOutputStream outputStream = new ByteBufOutputStream(out);
         serializer.write(protocol, outputStream);
         outputStream.close();
